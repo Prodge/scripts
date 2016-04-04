@@ -6,7 +6,11 @@ From the first '=====' to 'Ran xx tests in xx secs':
         Dump this_output into fails if its new
 """
 
-with open("test_output", "r") as f:
+import sys
+
+output_file = sys.argv[1]
+
+with open(output_file, "r") as f:
     fails = []
     run_times = []
     this_output = ''
