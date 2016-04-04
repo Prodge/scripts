@@ -13,6 +13,7 @@ output_file = sys.argv[1]
 with open(output_file, "r") as f:
     fails = []
     run_times = []
+    number_of_runs = 0
     this_output = ''
     in_results = False
     for line in f:
@@ -24,6 +25,7 @@ with open(output_file, "r") as f:
             else:
                 in_results = True
         if 'Ran ' in line and ' tests in ' in line:
+            number_of_runs += 1
             in_results = False
             run_times.append(line.split(' ')[-1][:-2])
         if in_results:
@@ -46,5 +48,6 @@ for fail in fails:
 print "Unique Errors/Failures: ", len(fails)
 print "Unique Errors: ", errors
 print "Unique Failures: ", failures
+print "Number of runs: ", number_of_runs
 print "Average Run Time: {}s or {}m".format(int(average_run_time), int(average_run_time / float(60)))
 
