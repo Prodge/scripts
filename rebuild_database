@@ -1,0 +1,16 @@
+#!/bin/bash
+
+# Drops and recreates database with name $1 from the pgdump file $2
+
+sudo su postgres <<EOF
+
+echo "Dropping database $1"
+dropdb "$1"
+
+echo "Creating database $1"
+createdb "$1"
+
+echo "Restoring $1 from $2"
+pg_restore -d "$1" "$2"
+
+EOF
