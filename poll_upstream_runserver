@@ -1,0 +1,44 @@
+#!/bin/bash
+
+#
+# Not for use in production.
+#
+# Run Django development server
+# Poll upstream master branch
+# If changes are present, pull them in and restart the server
+#
+
+POLL_DELAY=10
+BRANCH=master
+SERVER_DIR=../web_core
+
+while :
+do
+    # Fetch changes
+    git remote update
+
+    # Compare commit hash of remote and head
+    if [ $(git rev-parse HEAD) != $(git rev-parse @{u}) ]; then
+        echo "/----" $(date)
+        echo "Found changes in remote"
+
+        echo "Pulling the latest"
+        git pull origin $BRANCH
+
+        echo "Killing Django server"
+        fuser -k 8000/tcp
+
+        echo "Clearing virtualenv"
+        cd $SERVER_DIR && make clear_venv
+
+        echo "Building virtualenv"
+        cd $SERVER_DIR && make venv
+
+        echo "Running migrations"
+        cd $SERVER_DIR && make migrate
+
+        echo "Starting Django server"
+        cd $SERVER_DIR && make prodserver &
+    fi
+    sleep $POLL_DELAY
+done
