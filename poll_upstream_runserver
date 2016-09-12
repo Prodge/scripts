@@ -3,14 +3,32 @@
 #
 # Not for use in production.
 #
-# Run Django development server
+# Build project venv, run migrations, Run Django development server
 # Poll upstream master branch
-# If changes are present, pull them in and restart the server
+# If changes are present, pull them in and restart this script (allowing this script to be updated)
 #
 
 POLL_DELAY=10
 BRANCH=master
-SERVER_DIR=../web_core
+SERVER_DIR=../web_core # relative to SCRIPT_DIR
+SCRIPT_DIR=../deploy # relative to SERVER_DIR
+PREFIX="> > > > >  "
+
+
+echo $PREFIX "Killing Django server"
+fuser -k 8000/tcp
+
+echo $PREFIX "Clearing virtualenv"
+cd $SERVER_DIR && make clear_venv
+
+echo $PREFIX "Building virtualenv"
+cd $SERVER_DIR && make venv
+
+echo $PREFIX "Running migrations"
+cd $SERVER_DIR && make migrate
+
+echo $PREFIX "Starting Django server"
+cd $SERVER_DIR && make prodserver &
 
 while :
 do
@@ -19,26 +37,15 @@ do
 
     # Compare commit hash of remote and head
     if [ $(git rev-parse HEAD) != $(git rev-parse @{u}) ]; then
-        echo "/----" $(date)
-        echo "Found changes in remote"
+        echo $PREFIX "Detected Changes" $(date)
 
-        echo "Pulling the latest"
-        git pull origin $BRANCH
+        echo $PREFIX "Pulling the latest from" $BRANCH
+        git pull -u origin $BRANCH
 
-        echo "Killing Django server"
-        fuser -k 8000/tcp
-
-        echo "Clearing virtualenv"
-        cd $SERVER_DIR && make clear_venv
-
-        echo "Building virtualenv"
-        cd $SERVER_DIR && make venv
-
-        echo "Running migrations"
-        cd $SERVER_DIR && make migrate
-
-        echo "Starting Django server"
-        cd $SERVER_DIR && make prodserver &
+        echo $PREFIX "Restarting this script"
+        cd $SCRIPT_DIR && ./$(basename $0) && exit
+    else
+        echo $PREFIX "No changes."
     fi
     sleep $POLL_DELAY
 done
