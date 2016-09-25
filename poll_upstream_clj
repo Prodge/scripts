@@ -1,0 +1,45 @@
+#!/bin/bash
+
+#
+# build jar, run migrations, run jar
+# Poll upstream master branch
+# If changes are present, pull them in and restart this script (allowing this script to be updated)
+#
+
+POLL_DELAY=10
+BRANCH=master
+SERVER_DIR=../web # relative to SCRIPT_DIR
+SCRIPT_DIR=../deploy # relative to SERVER_DIR
+PREFIX="> > > > >  "
+
+echo $PREFIX "Building jar"
+cd $SERVER_DIR && make uberjar
+
+echo $PREFIX "Killing server"
+fuser -k 3000/tcp
+
+echo $PREFIX "Running migrations"
+cd $SERVER_DIR && make migrate
+
+echo $PREFIX "Starting Django server"
+cd $SERVER_DIR && make run-production &
+
+while :
+do
+    # Fetch changes
+    git remote update
+
+    # Compare commit hash of remote and head
+    if [ $(git rev-parse HEAD) != $(git rev-parse @{u}) ]; then
+        echo $PREFIX "Detected Changes" $(date)
+
+        echo $PREFIX "Pulling the latest from" $BRANCH
+        git pull -u origin $BRANCH
+
+        echo $PREFIX "Restarting this script"
+        cd $SCRIPT_DIR && ./$(basename $0) && exit
+    else
+        echo $PREFIX "No changes."
+    fi
+    sleep $POLL_DELAY
+done
