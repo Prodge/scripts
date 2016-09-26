@@ -19,15 +19,16 @@ echo $PREFIX "Killing server"
 fuser -k 3000/tcp
 
 echo $PREFIX "Running migrations"
-cd $SERVER_DIR && make migrate
+cd $SERVER_DIR && make migrate-production
 
-echo $PREFIX "Starting Django server"
+echo $PREFIX "Starting server"
 cd $SERVER_DIR && make run-production &
 
+echo $PREFIX "Listening for changes"
 while :
 do
     # Fetch changes
-    git remote update
+    git remote update >> /dev/null
 
     # Compare commit hash of remote and head
     if [ $(git rev-parse HEAD) != $(git rev-parse @{u}) ]; then
@@ -38,8 +39,6 @@ do
 
         echo $PREFIX "Restarting this script"
         cd $SCRIPT_DIR && ./$(basename $0) && exit
-    else
-        echo $PREFIX "No changes."
     fi
     sleep $POLL_DELAY
 done
